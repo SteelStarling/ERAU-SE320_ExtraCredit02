@@ -13,6 +13,9 @@ import numpy as np
 
 TEST_URL = "https://docs.google.com/document/d/e/2PACX-1vRMx5YQlZNa3ra8dYYxmv-QIQ3YJe8tbI3kqcuC7lQiZm-CSEznKfN_HYNSpoXcZIV3Y_O3YoUB1ecq/pub"
 
+COLUMN_NAMES = ["x-coordinate", "Character", "y-coordinate"]
+COLUMN_TYPES = {COLUMN_NAMES[0]: int, COLUMN_NAMES[1]: str, COLUMN_NAMES[2]: int}
+
 
 def url_to_string(url: str) -> str | None:
     """Gets a string from a URL or None if failed"""
@@ -30,6 +33,16 @@ def url_to_string(url: str) -> str | None:
 
     return text_out
 
+def df_row_to_grid(row: pd.Series, grid: np.ndarray) -> None:
+    """Takes a row of x, y, and character and adds the char to the given coordinates in the specified grid"""
+
+    # break info from row
+    x, char, y = row
+
+    # update grid
+    grid[x, y] = char
+
+
 def html_to_array(html: str):
     """Converts an HTML string to an array"""
 
@@ -44,10 +57,6 @@ def html_to_array(html: str):
 
     # there are obviously other ways to do this, but this feels the most readable
 
-    # get column names
-    column_row = table.find("tr")
-    column_names = [cell.get_text() for cell in column_row.find_all("td")]
-
     # get each cell
     text_cells = [
                     # get cells from rows
@@ -56,29 +65,28 @@ def html_to_array(html: str):
                     # parse each row
                     for row in table.find_all("tr")[1:]
                  ]
-    
-    # convert to dataframe with correct types (infer objects means everything isn't strs)
-    df = pd.DataFrame(text_cells, columns=column_names)
-    df = df.astype({"x-coordinate": int, "Character": str, "y-coordinate": int})
-    print(df.dtypes)
 
-    print(df)
+    # convert to dataframe with correct types (infer objects means everything isn't strs)
+    df = pd.DataFrame(text_cells, columns=COLUMN_NAMES)
+    df = df.astype(COLUMN_TYPES)
 
     # find highest x & y values
     x_max = df.iloc[:, X_COLUMN].max()
     y_max = df.iloc[:, Y_COLUMN].max()
 
     # create 2D list of correct size
-    chars = np.full((x_max, y_max), ' ', dtype="U1")
+    chars = np.full((x_max + 1, y_max + 1), ' ', dtype="U1")
 
-    # fill list with correct values
-    for x, char, y in df.T.iteritems:
-        chars[row, y] = char
+    print(type(chars))
+
+    # fill list with correct values (add the values of each row to chars)
+    df.apply(df_row_to_grid, args=(chars,), axis=1)
 
     # print list
     for row in chars:
         for cell in row:
-            print(cell)
+            print(cell, end="")
+        print()
 
 
 
